@@ -1,4 +1,4 @@
-import constants as co
+import qc_tools.constants as co
 import numpy as np
 
 class Molecule:
@@ -12,7 +12,7 @@ class Molecule:
         # Charge of the molecule
         self.charge = 0
         # Multiplicity
-        self.multiplicity = 0
+        self.multiplicity = 1
 
     @classmethod
     def from_atoms(cls, atoms, coords):
@@ -44,12 +44,10 @@ class Molecule:
                 if extended:
                     try:
                         charge, multiplicity = [int(k) for k in line.strip().split()]
+                        molecule.charge = charge
+                        molecule.multiplicity = multiplicity
                     except(ValueError):
-                        charge = 0
-                        multiplicity = 0
-                    molecule.charge = charge
-                    molecule.multiplicity = multiplicity
-
+                        pass
             else:
                 n+=1
                 data = line.strip().split()
@@ -68,7 +66,7 @@ class Molecule:
 
     def xyz(self, unit = 'angs', add_header = True):
         if add_header:
-            string = '{:d}\n{:d}{:d}\n'.format(self.natoms(), self.charge, self.multiplicity)
+            string = '{:d}\n{:d} {:d}\n'.format(self.natoms(), self.charge, self.multiplicity)
         else:
             string = ''
 
@@ -86,5 +84,5 @@ class Molecule:
         return string
 
 if __name__ == "__main__":
-    ammonia = Molecule.from_xyz_file('nh3.xyz')
+    ammonia = Molecule.from_xyz_file('A.xyz')
 

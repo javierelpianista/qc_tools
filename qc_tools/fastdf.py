@@ -1,7 +1,6 @@
 import os
 import numpy as np
-from molecule import Molecule
-
+from qc_tools.molecule import Molecule
 
 # Give the coordinates of a midbond center located in the 1/r^6-weighted average of the atomic positions of each monomer (this should be moved to a different file later on)
 def mb_r6(monoA, monoB):
@@ -27,6 +26,7 @@ def mb_r6(monoA, monoB):
         
     return coords
 
+# Create a sapt-fastdf input file
 def fastdf_run(opts, fastdf_options=None, monoA=None, monoB=None, mb=None):
     # Check for mandatory options
 
@@ -146,25 +146,81 @@ def fastdf_run(opts, fastdf_options=None, monoA=None, monoB=None, mb=None):
 
     return(out_str)
 
-if __name__ == '__main__':
-    options = {
-            'method' : 'HFDc1', 
-            'functional' : 'PBE',
-            'memory' : '16gb', 
+# ------------------------------------------------------------------------------
+# Here we define functions and classes for accessing output energies
 
-            'ips' : 12.7871,
-
-            'basis_set' : 'aug-cc-pvtz',
-
-            'mb_r6' : 'M1'
-    }
-
-    fastdf_options = {
-            'orca_grid' : 5,
-            'orca_finalgrid' : 6,
-            'nprocs' : 8,
-            'orca_ex_ri_method' : 'RIJK',
-            'add_deltahf' : 'true'
+# This dictionary relates short and long names for each sapt-fastdf term
+terms_dict = {
+        'E^{(1)}_{elst}'         :   'e1elst',
+        'E^{(1)}_{exch}'         :   'e1exch',
+        'E^{(2)}_{ind,r}'        :   'e2indr',
+        'E^{(2)}_{ex-ind,r}'     :   'e2exindr',
+        'E^{(2)}_{disp,r}'       :   'e2dispr',
+        'E^{(2)}_{exch-disp,r}'  :   'e2exdispr' 
         }
 
-    print(fastdf_run(options, fastdf_options))
+terms_dict_rev = dict((reversed(item) for item in terms_dict.items()))
+
+class Fastdf_results:
+    def __init__(self):
+        self.values = {}
+
+    def read_energies(self, output_file):
+        keys = ['E^{(1)}_{elst}',
+                'E^{(1)}_{exch}', 
+                'E^{(2)}_{ind,r}',
+                'E^{(2)}_{ex-ind,r}',
+                'E^{(2)}_{disp,r}',
+                'E^{(2)}_{exch-disp,r}',
+                ]
+        
+        read_values = False
+
+        for line in open(output_file).readlines():
+            if line.strip() == 'RESULTS':
+                read_values = True
+
+            if read_values:
+                for key in terms_dict:
+                    if key in line.strip():
+                        data = line.strip().split()
+                        key_short = terms_dict[key]
+                        self.values[key_short] = float(data[1])
+
+    if __name__ == '__main__':
+        options = {
+                'method' : 'HFDc1', 
+                'functional' : 'PBE',
+                'memory' : '16gb', 
+
+                'ips' : 12.7871,
+
+                'basis_set' : 'aug-cc-pvtz',
+
+                'mb_r6' : 'M1'
+        }
+
+        fastdf_options = {
+                'orca_grid' : 5,
+                'orca_finalgrid' : 6,
+                'nprocs' : 8,
+                'orca_ex_ri_method' : 'RIJK',
+                'add_deltahf' : 'true'
+            }
+
+        print(fastdf_run(options, fastdf_options))
+
+    def print_values(self):
+        for i, j in self.values.items():
+            print('{:30}{:15.8f}'.format(terms_dict_rev[i], j))
+
+    def E_saptdft(self):
+        req_terms = ['e1elst', 'e1exch', 'e2indr', 'e2exindr', 'e2dispr', 'e2exdispr']
+
+        if all(k in self.values for k in req_terms):
+            req_list = [self.values[x] for x in req_terms]
+            return sum(req_list)
+        else:
+            return None
+
+
