@@ -2,6 +2,7 @@ angs_to_bohr       = 1.889725988579
 bohr_to_angs       = 1/angs_to_bohr
 hartree_to_ev      = 27.2114
 hartree_to_kcalmol = 627.5095
+mhartree_to_ev     = 27.7114
 
 atomic_symbols     = [ 'H' , 'He', 'Li', 'Be', 'B' , 'C' , 'N' , 'O' , 'F' , 'Ne', 'Na', 'Mg', 'Al', 'Si', 'P' ,
                        'S' , 'Cl', 'Ar', 'K' , 'Ca', 'Sc', 'Ti', 'V' , 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',

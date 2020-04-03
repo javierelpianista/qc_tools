@@ -1,8 +1,9 @@
 import os
 
 fastdf_executable = '/data/sw/SAPT2020.1/bin/sapt-fastdf'
+orca_executable   = '/data/jgarcia/orca/orca_4_2_1_linux_x86-64_openmpi314/orca'
 
-available_kinds = ['fastdf']
+available_kinds = ['fastdf', 'orca']
 
 default_scratch_dir = '/scratch/local/jgarcia'
 
@@ -44,6 +45,8 @@ def submit_script(opts):
     else:
         if kind == 'fastdf':
             executable = fastdf_executable
+        elif kind == 'orca':
+            executable = orca_executable
 
     if 'remove_scratch' in opts:
         remove_scratch = opts['remove_scratch']
@@ -128,8 +131,8 @@ def submit_script(opts):
 
 if __name__ == '__main__':
     opts = {
-            'kind'      : 'fastdf',
-            'jobname'   : 'test1',
+            'kind'      : 'orca',
+            'jobname'   : 'test1.inp',
             'filename'  : 'sub_test.sh',
             'nprocs'    : 8,
             'time'      : '1:00:00',

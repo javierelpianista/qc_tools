@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from qc_tools.molecule import Molecule
+import qc_tools.constants as co
 
 # Give the coordinates of a midbond center located in the 1/r^6-weighted average of the atomic positions of each monomer (this should be moved to a different file later on)
 def mb_r6(monoA, monoB):
@@ -105,6 +106,13 @@ def fastdf_run(opts, fastdf_options=None, monoA=None, monoB=None, mb=None):
     else:
         out_str += 4*' ' + 'grac false\n'
 
+    if 'corrections' in opts and opts['corrections'] != None:
+        out_str += 4*' ' + 'corrections'
+        for corr in opts['corrections']:
+            out_str += ' ' + corr
+
+        out_str += '\n'
+
     out_str += '}\n\n'
 
     # Basis section
@@ -156,29 +164,65 @@ terms_dict = {
         'E^{(2)}_{ind,r}'        :   'e2indr',
         'E^{(2)}_{ex-ind,r}'     :   'e2exindr',
         'E^{(2)}_{disp,r}'       :   'e2dispr',
-        'E^{(2)}_{exch-disp,r}'  :   'e2exdispr' 
+        'E^{(2)}_{exch-disp,r}'  :   'e2exdispr',
+        'E^{(10)}_{elst}'        :   'e10elst',
+        'E^{(10)}_{exch}'        :   'e10exch',
+        'E^{(20)}_{ind,r}'       :   'e20indr',
+        'E^{(20)}_{ex-ind,r}'    :   'e20exindr',
+        'E^{(20)}_{disp,r}'      :   'e20dispr',
+        'E^{(20)}_{exch-disp,r}' :   'e20exdispr',
+        '\delta(HF,r)'           :   'deltahfr',
+        '\delta(HF)'             :   'deltahf',
+        'E^{HF}_int'             :   'hfint'
         }
 
 terms_dict_rev = dict((reversed(item) for item in terms_dict.items()))
 
 class Fastdf_results:
     def __init__(self):
+        self.basis_set = None
+        self.functional = None
+        self.ips = [None, None]
+        self.dipole = [None, None]
         self.values = {}
 
-    def read_energies(self, output_file):
-        keys = ['E^{(1)}_{elst}',
-                'E^{(1)}_{exch}', 
-                'E^{(2)}_{ind,r}',
-                'E^{(2)}_{ex-ind,r}',
-                'E^{(2)}_{disp,r}',
-                'E^{(2)}_{exch-disp,r}',
-                ]
-        
+    def read_data(self, output_file):
         read_values = False
+        read_input = False
 
         for line in open(output_file).readlines():
+
             if line.strip() == 'RESULTS':
                 read_values = True
+
+            if 'sapt-fastdf input file' in line:
+                read_input = True
+                input_count = 0
+
+            if read_input:
+                linel = line.strip().lower()
+                if 'grac' in linel:
+                    if not 'false' in linel:
+                        data = linel.split()
+                        self.ips[0] = float(data[3])
+                        self.ips[1] = float(data[4])
+
+                if '='*80 in linel:
+                    input_count += 1
+                    if input_count == 2:
+                        read_input = False
+
+                if 'functional' in linel:
+                    data = linel.split()
+                    self.functional = data[3]
+
+                if 'main_basis_set' in linel:
+                    data = linel.split()
+                    self.basis_set = data[3]
+
+                if 'off_basis_set' in linel:
+                    data = linel.split()
+                    self.basis_set = data[3]
 
             if read_values:
                 for key in terms_dict:
@@ -187,28 +231,41 @@ class Fastdf_results:
                         key_short = terms_dict[key]
                         self.values[key_short] = float(data[1])
 
-    if __name__ == '__main__':
-        options = {
-                'method' : 'HFDc1', 
-                'functional' : 'PBE',
-                'memory' : '16gb', 
+    def get_value(self, key, unit='mhartree'):
+        if unit == 'kcalmol':
+            scalef = co.hartree_to_kcalmol/1000
+        elif unit == 'mhartree':
+            scalef = 1
+        else:
+            raise Exception('unit {} not recognized'.format(unit))
+        
+        found = False
+        for my_key in terms_dict_rev:
+            if key == my_key:
+                found = True
 
-                'ips' : 12.7871,
+        if not found:
+            raise Exception('Error! key {} not available'.format(key))
 
-                'basis_set' : 'aug-cc-pvtz',
+        return self.values[key]*scalef
 
-                'mb_r6' : 'M1'
-        }
+    def get_dipole_moment(self, filename, unit = 'debye'):
+        if unit == 'debye':
+            string = 'Magnitude (Debye)'
+        elif unit == 'bohr':
+            string = 'Magnitude (a.u.)'
+        else:
+            raise Exception('Unit {} not recognized'.format(unit))
 
-        fastdf_options = {
-                'orca_grid' : 5,
-                'orca_finalgrid' : 6,
-                'nprocs' : 8,
-                'orca_ex_ri_method' : 'RIJK',
-                'add_deltahf' : 'true'
-            }
+        entries = []
 
-        print(fastdf_run(options, fastdf_options))
+        for line in open(filename, 'r'):
+            if string in line.strip():
+                entries.append(line.strip())
+
+        for i, entry in enumerate(entries[-2:]):
+            data = entry.split()
+            self.dipole[i] = float(data[-1])
 
     def print_values(self):
         for i, j in self.values.items():

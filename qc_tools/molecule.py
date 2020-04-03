@@ -23,7 +23,7 @@ class Molecule:
         return(molecule)
 
     @classmethod
-    def from_xyz_file(cls, filename, unit = 'angs', extended = True):
+    def from_xyz_file(cls, filename, unit = 'angs', extended = True, charge = 0, multiplicity = 1):
         molecule = Molecule()
 
         read_file = open(filename, 'r')
@@ -36,6 +36,9 @@ class Molecule:
             scalef = 1
         else:
             scalef = None
+
+        molecule.charge       = charge
+        molecule.multiplicity = multiplicity
 
         for i, line in enumerate(read_file.readlines()):
             if i == 0:
@@ -83,6 +86,21 @@ class Molecule:
 
         return string
 
-if __name__ == "__main__":
-    ammonia = Molecule.from_xyz_file('A.xyz')
+    def __add__(self, other):
+        if not isinstance(other, Molecule):
+            raise Exception('Expected other Molecule in __add__ operator')
 
+        result = Molecule()
+
+        for atom, coords in zip(self.atoms + other.atoms, self.coords + other.coords):
+            result.atoms.append(atom)
+            result.coords.append(coords)
+
+        result.charge = self.charge + other.charge
+
+        if self.multiplicity != 1 or other.multiplicity != 1:
+            print('One of the multiplicities is different from 1. Please set it manually.')
+
+        result.multiplicity = 1
+
+        return(result)
