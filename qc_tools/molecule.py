@@ -63,6 +63,36 @@ class Molecule:
             raise
 
         return molecule
+    
+    @classmethod
+    def from_cml_file(cls, filename, unit = 'angs', extended = True, charge = 0, multiplicity = 1):
+        elements = []
+        coords   = []
+
+        read = False
+        for line in open(filename, 'r').readlines():
+            if '</atomArray>' in line:
+                read = False
+
+            if read:
+                data = line.split()
+                
+                # Read element type
+                info = data[2].split('"')
+                elements.append(info[1])
+
+                # Read coordinates
+                coord = []
+                for n in range(3,6):
+                    info = data[n].split('"')
+                    coord.append(float(info[1]))
+                coords.append(coord)
+
+            if '<atomArray>' in line: 
+                read = True
+
+        molecule = Molecule.from_atoms(elements, coords)
+        return(molecule)
 
     def natoms(self):
         return len(self.atoms)
