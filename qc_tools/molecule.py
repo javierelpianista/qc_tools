@@ -23,6 +23,26 @@ class Molecule:
         return(molecule)
 
     @classmethod
+    def from_molecules(cls, mol1, mol2):
+        import warnings
+
+        molecule = Molecule()
+        molecule.atoms  = np.array(mol1.atoms + mol2.atoms) 
+        molecule.coords = np.array(mol1.coords + mol2.coords) 
+        molecule.Z      = np.array(mol1.Z + mol2.Z)
+        molecule.charge = mol1.charge + mol2.charge
+
+        if mol1.multiplicity == 1 and mol2.multiplicity == 1:
+            molecule.multiplicity = 1
+        else:
+            warnings.warn('WARNING!!! I don''t know what to do to add the multiplicity of two molecules.' +
+                    'I set them to 1.')
+
+            molecule.multiplicity = 1
+
+        return(molecule)
+
+    @classmethod
     def from_xyz_file(cls, filename, unit = 'angs', extended = True, charge = 0, multiplicity = 1):
         molecule = Molecule()
 
@@ -134,3 +154,42 @@ class Molecule:
         result.multiplicity = 1
 
         return(result)
+
+# Translate a molecule by a set amount. vec should be a list containing the x, y and z values.
+def translate(mol, vec, unit = 'angs'):
+    from copy import copy
+
+    if unit == 'angs':
+        scalef = co.angs_to_bohr
+    elif unit == 'bohr':
+        scalef = 1
+    else:
+        scalef = None
+
+    mol2 = copy(mol)
+
+    for n in range(mol2.natoms()):
+        for m in range(3):
+            mol2.coords[n][m] += vec[m]*scalef
+
+    return(mol2)
+
+# Return the center of mass of a molecule
+def COM(mol, unit = 'angs'):
+    M = 0.
+    pos = np.zeros(3)
+
+    if unit == 'angs':
+        scalef = co.bohr_to_angs
+    elif unit == 'bohr':
+        scalef = 1
+    else:
+        scalef = None
+
+    for atom, coords in zip(mol.atoms, mol.coords):
+        mass = co.atomic_masses[co.atomic_symbols.index(atom[0].upper() + atom[1].lower() if len(atom) == 2 else atom[0].upper())]
+
+        M += mass
+        pos += mass*np.array(coords)
+
+    return(scalef*pos/M)
