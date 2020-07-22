@@ -3,30 +3,6 @@ import numpy as np
 from qc_tools.molecule import Molecule
 import qc_tools.constants as co
 
-# Give the coordinates of a midbond center located in the 1/r^6-weighted average of the atomic positions of each monomer (this should be moved to a different file later on)
-def mb_r6(monoA, monoB):
-    weight = np.zeros((len(monoA.atoms), len(monoB.atoms)))
-    coords = np.zeros(3)
-
-    dp_sum = float(0.0)
-    for i in range(len(monoA.atoms)):
-        for j in range(len(monoB.atoms)):
-            rab = 0.0
-            for k in range(3):
-                rab = rab + (monoA.coords[i][k] - monoB.coords[j][k])**2
-
-            weight[i][j] = 1/rab**3
-            dp_sum = dp_sum + weight[i][j]
-
-    weight = weight / dp_sum
-
-    for k in range(3):
-        for i in range(len(monoA.atoms)):
-            for j in range(len(monoB.atoms)):
-                coords[k] = coords[k] + weight[i][j]*0.5*(monoA.coords[i][k] + monoB.coords[j][k])
-        
-    return coords
-
 # Create a sapt-fastdf input file
 def fastdf_run(opts, fastdf_options=None, monoA=None, monoB=None, mb=None):
     # Check for mandatory options

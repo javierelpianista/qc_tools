@@ -7,7 +7,7 @@ available_kinds = ['fastdf', 'orca']
 
 default_scratch_dir = '/scratch/local/jgarcia'
 
-def submit_script(opts):
+def submit_script(**opts):
     if 'kind' in opts:
         kind = opts['kind']
     else:
@@ -52,6 +52,11 @@ def submit_script(opts):
         remove_scratch = opts['remove_scratch']
     else:
         remove_scratch = True
+
+    if 'follow' in opts:
+        follow = opts['follow']
+    else:
+        follow = True
 
 # ------------------------------------------------------------------------------
     out_str = '#!/bin/bash\n\n'
@@ -108,12 +113,25 @@ def submit_script(opts):
     out_str += 'cd $SCRATCHDIR\n'
     out_str += '\n'
 
+    if follow:
+        out_str += '. ~/.bashrc\n\n'
+
     args_str = ''
     for i, arg in enumerate(input_args):
         if i != 0:
             args_str += ' '
         args_str += arg
-    out_str += '{} {}\n'.format(executable, args_str)
+    out_str += '{} {}'.format(executable, args_str)
+
+    if follow:
+        out_str += ' & \n'
+        out_str += 'follow_single $! > memdata\n'
+        out_str += 'wait\n'
+        out_str += 'cp memdata ${LOCALDIR}/memdata-${SLURM_JOB_ID}.out\n'
+    else:
+        out_str += '\n'
+
+
 
     if kind == 'fastdf':
         out_str += 'cat *.timer\n'
