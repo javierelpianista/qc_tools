@@ -157,7 +157,7 @@ class Molecule:
 
 # Translate a molecule by a set amount. vec should be a list containing the x, y and z values.
 def translate(mol, vec, unit = 'angs'):
-    from copy import copy
+    from copy import deepcopy
 
     if unit == 'angs':
         scalef = co.angs_to_bohr
@@ -166,7 +166,7 @@ def translate(mol, vec, unit = 'angs'):
     else:
         scalef = None
 
-    mol2 = copy(mol)
+    mol2 = deepcopy(mol)
 
     for n in range(mol2.natoms()):
         for m in range(3):
@@ -193,3 +193,28 @@ def COM(mol, unit = 'angs'):
         pos += mass*np.array(coords)
 
     return(scalef*pos/M)
+
+# Give the coordinates of a midbond center located in the 1/r^6-weighted average of the atomic positions of each monomer (this should be moved to a different file later on)
+def mb_r6(monoA, monoB):
+    weight = np.zeros((len(monoA.atoms), len(monoB.atoms)))
+    coords = np.zeros(3)
+
+    dp_sum = float(0.0)
+    for i in range(len(monoA.atoms)):
+        for j in range(len(monoB.atoms)):
+            rab = 0.0
+            for k in range(3):
+                rab = rab + (monoA.coords[i][k] - monoB.coords[j][k])**2
+
+            weight[i][j] = 1/rab**3
+            dp_sum = dp_sum + weight[i][j]
+
+    weight = weight / dp_sum
+
+    for k in range(3):
+        for i in range(len(monoA.atoms)):
+            for j in range(len(monoB.atoms)):
+                coords[k] = coords[k] + weight[i][j]*0.5*(monoA.coords[i][k] + monoB.coords[j][k])
+        
+    return coords
+
